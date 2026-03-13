@@ -1,0 +1,41 @@
+[project]
+name = "moofwdguard"
+version = "0.1.0"
+description = "MoofwdGuard — Identity Signal Aggregation & Fraud Scoring"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi[standard]",
+    "pydantic[email]>=2",
+    "pydantic-settings",
+    "httpx",
+    "redis[asyncio]",
+    "sqlalchemy[asyncio]",
+    "asyncpg",
+    "anthropic",
+    "uvicorn[standard]",
+    "structlog",
+    "slowapi",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-httpx",
+    "respx",
+    "locust",
+    "rich",
+    "fakeredis[asyncio]",
+    "pytest-cov",
+]
+
+[tool.setuptools.packages.find]
+include = ["api*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
