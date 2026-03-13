@@ -5,10 +5,13 @@ from uuid import uuid4
 import structlog
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, EmailStr, Field, IPvAnyAddress
+from redis.asyncio import Redis
 
 from api.core.dependencies import get_aggregator
+from api.core.redis_client import get_redis
 from api.models.request import TransactionRequest
 from api.services.aggregator import IdentityAggregator
+from api.services.suspicious import evaluate_suspicion, store_suspicious
 
 logger = structlog.get_logger()
 
@@ -39,12 +42,15 @@ class SignalsResponse(BaseModel):
     identity_id: str
     cache_key: str
     latency_ms: float
+    risk_level: str | None = None
+    flags: list[str] | None = None
 
 
 @router.post("/signals", response_model=SignalsResponse)
 async def create_signals(
     body: SignalsRequest,
     aggregator: Annotated[IdentityAggregator, Depends(get_aggregator)],
+    redis: Annotated[Redis, Depends(get_redis)],
     response: Response,
 ) -> SignalsResponse:
     request_id = str(uuid4())
@@ -77,15 +83,34 @@ async def create_signals(
     latency_ms = (time.perf_counter() - start) * 1000
     cache_key = ctx.to_cache_key(body.email)
 
+    # Evaluate for suspicious activity
+    suspicious = evaluate_suspicion(
+        ctx,
+        transaction_id=body.transaction_id,
+        email=body.email,
+        ip_address=str(body.ip_address),
+    )
+
+    risk_level = None
+    flag_codes = None
+    if suspicious:
+        await store_suspicious(redis, suspicious)
+        risk_level = suspicious.risk_level.value
+        flag_codes = [f.code for f in suspicious.flags]
+
     logger.info(
         "signals_processed",
         transaction_id=body.transaction_id,
         identity_id=ctx.identity_id,
         latency_ms=round(latency_ms, 2),
+        risk_level=risk_level,
+        flags=flag_codes,
     )
 
     return SignalsResponse(
         identity_id=ctx.identity_id,
         cache_key=cache_key,
         latency_ms=round(latency_ms, 2),
+        risk_level=risk_level,
+        flags=flag_codes,
     )

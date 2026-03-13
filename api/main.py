@@ -34,5 +34,7 @@ async def health(redis: Annotated[Redis, Depends(get_redis)]) -> dict:
 
 # Import and mount routers
 from api.routers.signals import router as signals_router  # noqa: E402
+from api.routers.dashboard import router as dashboard_router  # noqa: E402
 
 app.include_router(signals_router)
+app.include_router(dashboard_router)
