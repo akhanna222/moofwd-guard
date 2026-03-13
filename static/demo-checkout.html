@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoofwdGuard — Demo Checkout</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      color: #1d1d1f;
+    }
+    .container { max-width: 480px; width: 100%; }
+    h1 { font-size: 24px; margin-bottom: 4px; }
+    .subtitle { color: #86868b; font-size: 14px; margin-bottom: 24px; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 16px; margin-bottom: 16px; color: #1d1d1f; }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d2d2d7;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus, .field select:focus { border-color: #0071e3; }
+    .row { display: flex; gap: 12px; }
+    .row .field { flex: 1; }
+    .amount {
+      text-align: center;
+      padding: 16px;
+      background: #f5f5f7;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .amount .price { font-size: 32px; font-weight: 700; }
+    .amount .label { font-size: 13px; color: #86868b; }
+    button[type="submit"] {
+      width: 100%;
+      padding: 14px;
+      background: #0071e3;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button[type="submit"]:hover { background: #0077ed; }
+    button[type="submit"]:disabled { background: #d2d2d7; cursor: not-allowed; }
+
+    /* Signal panel */
+    .signal-panel {
+      background: #1d1d1f;
+      border-radius: 12px;
+      padding: 20px;
+      color: #fff;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      display: none;
+    }
+    .signal-panel h3 {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: #86868b;
+    }
+    .signal-panel .ok { color: #30d158; }
+    .signal-panel .warn { color: #ff9f0a; }
+    .signal-panel .danger { color: #ff453a; }
+    .signal-panel pre {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .signal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .latency-badge {
+      background: #30d158;
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .latency-badge.slow { background: #ff9f0a; }
+
+    /* Live signals bar */
+    .live-signals {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    .live-signals h3 {
+      font-size: 13px;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .signal-dots { display: flex; gap: 12px; flex-wrap: wrap; }
+    .dot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #86868b;
+    }
+    .dot .indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #d2d2d7;
+      transition: background 0.3s;
+    }
+    .dot .indicator.active { background: #30d158; }
+    .dot .indicator.warning { background: #ff9f0a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MoofwdGuard Demo</h1>
+    <p class="subtitle">Real-time fraud signal collection — try it live</p>
+
+    <!-- Live signal indicators -->
+    <div class="live-signals">
+      <h3>Live Signals Collecting</h3>
+      <div class="signal-dots">
+        <div class="dot"><span class="indicator" id="ind-mouse"></span> Mouse</div>
+        <div class="dot"><span class="indicator" id="ind-scroll"></span> Scroll</div>
+        <div class="dot"><span class="indicator" id="ind-focus"></span> Focus</div>
+        <div class="dot"><span class="indicator" id="ind-paste"></span> Paste</div>
+        <div class="dot"><span class="indicator" id="ind-time"></span> <span id="timer">0s</span></div>
+      </div>
+    </div>
+
+    <form id="checkout-form" data-transaction-id="">
+      <div class="card">
+        <div class="amount">
+          <div class="label">Order Total</div>
+          <div class="price">$49.99</div>
+        </div>
+
+        <h2>Customer</h2>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" value="shopper@example.com" required>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Payment</h2>
+        <div class="field">
+          <label>Card Number</label>
+          <input type="text" name="card_number" id="card-number-field"
+                 placeholder="4111 1111 1111 1111" maxlength="19" required>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Expiry</label>
+            <input type="text" name="expiry" placeholder="MM/YY" maxlength="5">
+          </div>
+          <div class="field">
+            <label>CVV</label>
+            <input type="text" name="cvv" placeholder="123" maxlength="4">
+          </div>
+        </div>
+        <div class="field">
+          <label>Billing Country</label>
+          <select name="billing_country">
+            <option value="US">United States</option>
+            <option value="GB">United Kingdom</option>
+            <option value="CA">Canada</option>
+            <option value="AU">Australia</option>
+            <option value="DE">Germany</option>
+            <option value="NG">Nigeria</option>
+            <option value="RU">Russia</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" id="pay-btn">Pay $49.99</button>
+    </form>
+
+    <!-- Results panel -->
+    <div class="signal-panel" id="results"></div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8000';
+    const startTime = Date.now();
+
+    // --- Behavioural tracking ---
+    let mouseMovementPresent = false;
+    let copyPasteDetected = false;
+    let pageFocusLostCount = 0;
+    let scrollEventCount = 0;
+
+    document.addEventListener('mousemove', () => {
+      mouseMovementPresent = true;
+      document.getElementById('ind-mouse').classList.add('active');
+    }, { once: true });
+
+    document.addEventListener('scroll', () => {
+      scrollEventCount++;
+      document.getElementById('ind-scroll').classList.add('active');
+    });
+
+    document.getElementById('card-number-field').addEventListener('paste', () => {
+      copyPasteDetected = true;
+      document.getElementById('ind-paste').classList.add('warning');
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        pageFocusLostCount++;
+        document.getElementById('ind-focus').classList.add('warning');
+      }
+    });
+
+    // Timer
+    setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      document.getElementById('timer').textContent = elapsed + 's';
+      document.getElementById('ind-time').classList.add('active');
+    }, 1000);
+
+    // Card number formatting
+    document.getElementById('card-number-field').addEventListener('input', (e) => {
+      let v = e.target.value.replace(/\D/g, '').slice(0, 16);
+      e.target.value = v.replace(/(\d{4})(?=\d)/g, '$1 ');
+    });
+
+    // Generate transaction ID
+    const txnId = 'txn_demo_' + Math.random().toString(36).slice(2, 10);
+    document.getElementById('checkout-form').dataset.transactionId = txnId;
+
+    // --- Form submit ---
+    document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btn = document.getElementById('pay-btn');
+      btn.disabled = true;
+      btn.textContent = 'Analyzing signals...';
+
+      const form = e.target;
+      const cardRaw = form.card_number.value.replace(/\s/g, '');
+      const checkoutDuration = (Date.now() - startTime) / 1000;
+
+      // Collect WebGL
+      let webglHash = null;
+      try {
+        const gl = document.createElement('canvas').getContext('webgl');
+        if (gl) {
+          const ext = gl.getExtension('WEBGL_debug_renderer_info');
+          if (ext) webglHash = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+        }
+      } catch (_) {}
+
+      const payload = {
+        transaction_id: txnId,
+        ip_address: '0.0.0.0',
+        email: form.email.value,
+        bin: cardRaw.slice(0, 6).padEnd(6, '0'),
+        billing_country: form.billing_country.value,
+        device_fingerprint: 'fp_demo_' + Math.random().toString(36).slice(2, 10),
+        checkout_duration_seconds: checkoutDuration,
+        user_agent: navigator.userAgent,
+        browser_language: navigator.language,
+        screen_resolution: screen.width + 'x' + screen.height,
+        timezone_offset: new Date().getTimezoneOffset(),
+        webgl_hash: webglHash,
+        mouse_movement_present: mouseMovementPresent,
+        copy_paste_detected: copyPasteDetected,
+        page_focus_lost_count: pageFocusLostCount,
+        scroll_event_count: scrollEventCount,
+        amount_usd: 49.99
+      };
+
+      const panel = document.getElementById('results');
+
+      try {
+        const t0 = performance.now();
+        const resp = await fetch(`${API_BASE}/v1/signals`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const elapsed = Math.round(performance.now() - t0);
+        const data = await resp.json();
+
+        // Fetch the full identity context from a debug endpoint or show what we have
+        const latencyClass = elapsed > 200 ? 'slow' : '';
+
+        let flags = [];
+        if (!mouseMovementPresent) flags.push('NO MOUSE MOVEMENT');
+        if (copyPasteDetected) flags.push('PASTE DETECTED');
+        if (checkoutDuration < 5) flags.push('SPEED CHECKOUT (' + checkoutDuration.toFixed(1) + 's)');
+        if (pageFocusLostCount > 2) flags.push('FOCUS LOST ' + pageFocusLostCount + 'x');
+
+        const flagsHtml = flags.length > 0
+          ? flags.map(f => `<span class="danger">⚠ ${f}</span>`).join('\n')
+          : '<span class="ok">✓ No suspicious behavioral signals</span>';
+
+        panel.style.display = 'block';
+        panel.innerHTML = `
+          <div class="signal-header">
+            <h3>Signal Analysis Results</h3>
+            <span class="latency-badge ${latencyClass}">${elapsed}ms</span>
+          </div>
+          <pre>
+<span class="ok">Identity</span>
+  identity_id:  ${data.identity_id}
+  cache_key:    ${data.cache_key?.slice(0, 16)}...
+  latency:      ${data.latency_ms}ms (server)
+
+<span class="ok">Device Signals</span>
+  user_agent:   ${navigator.userAgent.slice(0, 50)}...
+  screen:       ${screen.width}x${screen.height}
+  timezone:     UTC${new Date().getTimezoneOffset() > 0 ? '-' : '+'}${Math.abs(new Date().getTimezoneOffset()/60)}
+  webgl:        ${webglHash ? webglHash.slice(0, 40) + '...' : 'n/a'}
+
+<span class="ok">Behavioral Signals</span>
+  checkout_duration:  ${checkoutDuration.toFixed(1)}s
+  mouse_movement:     ${mouseMovementPresent ? '<span class="ok">yes</span>' : '<span class="danger">NO</span>'}
+  copy_paste:         ${copyPasteDetected ? '<span class="danger">YES</span>' : '<span class="ok">no</span>'}
+  focus_lost:         ${pageFocusLostCount}x
+  scroll_events:      ${scrollEventCount}
+
+<span class="ok">Payment Signals</span>
+  bin:              ${cardRaw.slice(0, 6).padEnd(6, '0')}
+  billing_country:  ${form.billing_country.value}
+  amount:           $49.99
+
+<span class="${flags.length > 0 ? 'danger' : 'ok'}">Flags</span>
+${flagsHtml}
+          </pre>
+        `;
+
+        btn.textContent = 'Signals Captured ✓';
+        btn.style.background = '#30d158';
+
+      } catch (err) {
+        panel.style.display = 'block';
+        panel.innerHTML = `
+          <h3>Error</h3>
+          <pre class="danger">${err.message}
+
+Make sure the API is running:
+  uvicorn api.main:app --reload --port 8000</pre>
+        `;
+        btn.textContent = 'Error — Retry';
+        btn.disabled = false;
+        btn.style.background = '#ff453a';
+      }
+    });
+  </script>
+</body>
+</html>
