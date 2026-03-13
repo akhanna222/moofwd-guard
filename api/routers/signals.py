@@ -5,8 +5,9 @@ from uuid import uuid4
 import structlog
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, EmailStr, Field, IPvAnyAddress
+from redis.asyncio import Redis
 
-from api.core.dependencies import get_aggregator
+from api.core.dependencies import get_aggregator, get_redis
 from api.models.request import TransactionRequest
 from api.services.aggregator import IdentityAggregator
 
@@ -89,3 +90,17 @@ async def create_signals(
         cache_key=cache_key,
         latency_ms=round(latency_ms, 2),
     )
+
+
+@router.get("/signals/{cache_key}")
+async def get_signal_details(
+    cache_key: str,
+    redis: Annotated[Redis, Depends(get_redis)],
+) -> dict:
+    """Retrieve full identity context from cache"""
+    data = await redis.get(f"identity:{cache_key}")
+    if not data:
+        return {"error": "Identity not found", "cache_key": cache_key}
+    
+    import json
+    return json.loads(data)
