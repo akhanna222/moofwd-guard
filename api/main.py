@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import structlog
 from fastapi import Depends, FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 
 from api.core.config import Settings, get_settings
@@ -24,6 +25,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="MoofwdGuard", version="0.1.0", lifespan=lifespan)
+
+# Enable CORS for browser access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
