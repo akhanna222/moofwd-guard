@@ -12,7 +12,11 @@ class Settings(BaseSettings):
     DECISION_APPROVE_THRESHOLD: float = 30.0
     DECISION_DECLINE_THRESHOLD: float = 65.0
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
 
 def get_settings() -> Settings:
